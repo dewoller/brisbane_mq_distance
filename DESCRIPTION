@@ -1,0 +1,8 @@
+Package: alibrisbane
+Title: Ali Brisbane Travel Distance Analysis
+Version: 0.1.0
+Description: OSRM travel distance analysis from client postcodes to candidate locations.
+License: MIT
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

@@ -1,0 +1,15 @@
+_targets/
+data/abs/*.zip
+data/abs/*.shp
+data/abs/*.shx
+data/abs/*.dbf
+data/abs/*.prj
+data/abs/*.xlsx
+data/abs/mb_shp/
+data/abs/poa_shp/
+*.Rproj.user
+.Rhistory
+.RData
+.Rproj
+output/
+renv/

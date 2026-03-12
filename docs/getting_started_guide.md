@@ -1,19 +1,8 @@
 # Getting Started: From Zero to Running This Project
 
-This guide walks you through everything from creating a GitHub account to downloading and running this project using Claude Code (an AI coding assistant).
+This guide assumes you already have a GitHub account and have been added as a collaborator on the project. If you need to create a GitHub account first, see [How to Create a GitHub Account](how_to_create_a_github_account.md).
 
-## Step 1: Create a GitHub Account
-
-1. Go to https://github.com
-2. Click **Sign up** in the top right
-3. Enter your email address, create a password, and choose a username
-4. Complete the verification puzzle
-5. Choose the **Free** plan (it has everything you need)
-6. Check your email and click the verification link GitHub sends you
-
-Once you have an account, give your GitHub **username** to the person who shared this project so they can add you as a collaborator.
-
-## Step 2: Accept the Repository Invitation
+## Step 1: Accept the Repository Invitation
 
 After the project owner adds you as a collaborator:
 
@@ -21,11 +10,11 @@ After the project owner adds you as a collaborator:
 2. Click the link in the email to accept
 3. You now have access to the repository at https://github.com/dewoller/brisbane_mq_distance
 
-## Step 3: Install Required Software
+## Step 2: Install Required Software
 
 You need three things installed on your computer:
 
-### 3a. Install Git
+### 2a. Install Git
 
 **macOS:**
 
@@ -41,7 +30,7 @@ If it prompts you to install Xcode Command Line Tools, click **Install** and wai
 2. Run the installer, accepting all defaults
 3. Open **Git Bash** (installed with Git) to use git commands
 
-### 3b. Install R
+### 2b. Install R
 
 **macOS:**
 1. Go to https://cran.r-project.org/bin/macosx/
@@ -53,7 +42,7 @@ If it prompts you to install Xcode Command Line Tools, click **Install** and wai
 2. Click "Download R-4.x.x for Windows"
 3. Run the installer, accepting all defaults
 
-### 3c. Install Claude Code
+### 2c. Install Claude Code
 
 Claude Code is an AI assistant that runs in your terminal. It can help you set up the project, troubleshoot errors, and understand the code.
 
@@ -68,7 +57,7 @@ claude
 ```
 4. On first launch, it will ask you to log in to your Anthropic account (create one at https://console.anthropic.com if needed)
 
-## Step 4: Configure Git with Your GitHub Account
+## Step 3: Configure Git with Your GitHub Account
 
 Open your terminal (or Git Bash on Windows) and run these two commands, replacing with your actual name and the email you used for GitHub:
 
@@ -77,7 +66,7 @@ git config --global user.name "Your Name"
 git config --global user.email "your.email@example.com"
 ```
 
-## Step 5: Download the Project
+## Step 4: Download the Project
 
 In your terminal, navigate to where you want the project (e.g., your home folder or a projects folder):
 
@@ -102,7 +91,7 @@ When prompted for credentials:
 7. **Copy the token immediately** (you will not see it again)
 8. Use this token as your password when git asks
 
-## Step 6: Use Claude Code to Set Up and Run the Project
+## Step 5: Use Claude Code to Set Up and Run the Project
 
 This is where it gets easy. Start Claude Code inside the project folder:
 
@@ -137,7 +126,7 @@ Claude Code will read the project files and run the install commands for you.
 
 Claude Code can read error messages, look at the code, and suggest fixes.
 
-## Step 7: View the Results
+## Step 6: View the Results
 
 After the pipeline completes, results are in the `output/` folder:
 

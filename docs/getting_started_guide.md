@@ -1,20 +1,12 @@
 # Getting Started: From Zero to Running This Project
 
-This guide assumes you already have a GitHub account and have been added as a collaborator on the project. If you need to create a GitHub account first, see [How to Create a GitHub Account](how_to_create_a_github_account.md).
+This guide walks you through downloading and running this project. The project is public on GitHub so no account or invitation is needed to download it.
 
-## Step 1: Accept the Repository Invitation
-
-After the project owner adds you as a collaborator:
-
-1. Check your email for an invitation from GitHub
-2. Click the link in the email to accept
-3. You now have access to the repository at https://github.com/dewoller/brisbane_mq_distance
-
-## Step 2: Install Required Software
+## Step 1: Install Required Software
 
 You need three things installed on your computer:
 
-### 2a. Install Git
+### 1a. Install Git
 
 **macOS:**
 
@@ -30,7 +22,7 @@ If it prompts you to install Xcode Command Line Tools, click **Install** and wai
 2. Run the installer, accepting all defaults
 3. Open **Git Bash** (installed with Git) to use git commands
 
-### 2b. Install R
+### 1b. Install R
 
 **macOS:**
 1. Go to https://cran.r-project.org/bin/macosx/
@@ -42,7 +34,7 @@ If it prompts you to install Xcode Command Line Tools, click **Install** and wai
 2. Click "Download R-4.x.x for Windows"
 3. Run the installer, accepting all defaults
 
-### 2c. Install Claude Code
+### 1c. Install Claude Code
 
 Claude Code is an AI assistant that runs in your terminal. It can help you set up the project, troubleshoot errors, and understand the code.
 
@@ -57,16 +49,7 @@ claude
 ```
 4. On first launch, it will ask you to log in to your Anthropic account (create one at https://console.anthropic.com if needed)
 
-## Step 3: Configure Git with Your GitHub Account
-
-Open your terminal (or Git Bash on Windows) and run these two commands, replacing with your actual name and the email you used for GitHub:
-
-```bash
-git config --global user.name "Your Name"
-git config --global user.email "your.email@example.com"
-```
-
-## Step 4: Download the Project
+## Step 2: Download the Project
 
 In your terminal, navigate to where you want the project (e.g., your home folder or a projects folder):
 
@@ -76,22 +59,9 @@ git clone https://github.com/dewoller/brisbane_mq_distance.git
 cd brisbane_mq_distance
 ```
 
-When prompted for credentials:
-- **Username:** your GitHub username
-- **Password:** you need a Personal Access Token (not your actual password)
+No login or credentials are needed — the repository is public.
 
-### Creating a Personal Access Token
-
-1. Go to https://github.com/settings/tokens
-2. Click **Generate new token** then **Generate new token (classic)**
-3. Give it a name like "My laptop"
-4. Set expiration to 90 days (or longer)
-5. Check the **repo** scope checkbox
-6. Click **Generate token**
-7. **Copy the token immediately** (you will not see it again)
-8. Use this token as your password when git asks
-
-## Step 5: Use Claude Code to Set Up and Run the Project
+## Step 3: Use Claude Code to Set Up and Run the Project
 
 This is where it gets easy. Start Claude Code inside the project folder:
 
@@ -126,7 +96,7 @@ Claude Code will read the project files and run the install commands for you.
 
 Claude Code can read error messages, look at the code, and suggest fixes.
 
-## Step 6: View the Results
+## Step 4: View the Results
 
 After the pipeline completes, results are in the `output/` folder:
 
@@ -153,14 +123,6 @@ This is the most common issue. The sf package needs system libraries:
 ```r
 install.packages("sf", type = "binary")
 ```
-
-### Git asks for password repeatedly
-
-Set up credential caching so you only enter your token once:
-```bash
-git config --global credential.helper store
-```
-Next time you enter your token, it will be saved.
 
 ### OSRM server is unreachable
 

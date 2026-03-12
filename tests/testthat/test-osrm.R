@@ -1,5 +1,5 @@
 # ABOUTME: Tests for OSRM API query building and response parsing
-# ABOUTME: Tests marked 'osrm_live' require http://louisa_ts:5000 to be running
+# ABOUTME: Tests marked 'osrm_live' require http://totoro.magpie-inconnu.ts.net:5001 to be running
 
 library(testthat)
 library(tibble)
@@ -12,10 +12,10 @@ test_that("build_osrm_table_url constructs correct URL", {
 
   url <- build_osrm_table_url(
     sources, destinations,
-    base_url = "http://louisa_ts:5000"
+    base_url = "http://totoro.magpie-inconnu.ts.net:5001"
   )
 
-  expect_true(grepl("^http://louisa_ts:5000/table/v1/driving/", url))
+  expect_true(grepl("^http://totoro.magpie-inconnu.ts.net:5001/table/v1/driving/", url))
   expect_true(grepl("sources=0;1", url))
   expect_true(grepl("destinations=2;3", url))
   expect_true(grepl("annotations=duration,distance", url))

@@ -1,5 +1,5 @@
 # ABOUTME: OSRM table API client for batch driving distance/duration queries
-# ABOUTME: Chunks mesh block centroids into batches and queries against louisa_ts:5000
+# ABOUTME: Chunks mesh block centroids into batches and queries against totoro.magpie-inconnu.ts.net:5001
 
 library(httr2)
 library(dplyr)
@@ -7,7 +7,7 @@ library(tidyr)
 library(purrr)
 library(tibble)
 
-build_osrm_table_url <- function(sources, destinations, base_url = "http://louisa_ts:5000") {
+build_osrm_table_url <- function(sources, destinations, base_url = "http://totoro.magpie-inconnu.ts.net:5001") {
   # Combine all coordinates: sources first, then destinations
   all_coords <- c(
     paste(sources$lon, sources$lat, sep = ","),
@@ -31,15 +31,20 @@ build_osrm_table_url <- function(sources, destinations, base_url = "http://louis
 parse_osrm_table_response <- function(response, mb_codes, location_ids) {
   # Convert duration matrix to long-format tibble via pivot
   # Handle both matrix (test) and list-of-lists (JSON) input
+  # OSRM returns null for unreachable pairs; replace with NA
+  null_to_na <- function(x) if (is.null(x)) NA_real_ else as.numeric(x)
+  list_to_matrix <- function(lst) {
+    do.call(rbind, lapply(lst, function(row) sapply(row, null_to_na)))
+  }
   dur_mat <- if (is.matrix(response$durations)) {
     response$durations
   } else {
-    do.call(rbind, response$durations)
+    list_to_matrix(response$durations)
   }
   dist_mat <- if (is.matrix(response$distances)) {
     response$distances
   } else {
-    do.call(rbind, response$distances)
+    list_to_matrix(response$distances)
   }
 
   dur_mat |>
@@ -61,7 +66,7 @@ chunk_indices <- function(n, chunk_size = 100) {
   lapply(starts, function(s) s:min(s + chunk_size - 1, n))
 }
 
-route_all_mb_to_locations <- function(mb_weights, locations, osrm_url = "http://louisa_ts:5000", chunk_size = 100) {
+route_all_mb_to_locations <- function(mb_weights, locations, osrm_url = "http://totoro.magpie-inconnu.ts.net:5001", chunk_size = 100) {
   mb_data <- mb_weights |>
     sf::st_drop_geometry() |>
     select(mb_code, postcode, centroid_lon, centroid_lat, spread_individuals, spread_households)

@@ -55,6 +55,11 @@ load_mb_boundaries <- function(abs_dir = "data/abs") {
   ste_col <- grep("STE_CODE|STATE_CODE", names(mb), value = TRUE, ignore.case = TRUE)[1]
   if (is.na(ste_col)) stop("No state code column found in MB boundaries. Columns: ", paste(names(mb), collapse = ", "))
   mb <- mb |> filter(!!sym(ste_col) %in% c("1", "3"))
+  # Only keep residential mesh blocks
+  cat_col <- grep("MB_CAT", names(mb), value = TRUE, ignore.case = TRUE)[1]
+  if (!is.na(cat_col)) {
+    mb <- mb |> filter(!!sym(cat_col) == "Residential")
+  }
   mb
 }
 
@@ -130,14 +135,18 @@ load_mb_population <- function(abs_dir = "data/abs") {
       }
     )
   }
-  pop <- readxl::read_excel(xlsx_path)
-  # Columns: MB_CODE_2021, Person_Usually_Resident, Dwelling
-  mb_col <- grep("MB_CODE", names(pop), value = TRUE, ignore.case = TRUE)[1]
-  pop_col <- grep("Person_Usually_Resident|Person.*Resident|Persons", names(pop), value = TRUE, ignore.case = TRUE)[1]
-  if (is.na(mb_col) || is.na(pop_col)) {
-    stop("Could not find MB_CODE and population columns. Columns: ", paste(names(pop), collapse = ", "))
+  # The XLSX has per-state sheets with 5 header rows to skip.
+  # Columns: MB_CODE_2021, MB_CATEGORY_NAME_2021, AREA_ALBERS_SQKM, Dwelling, Person, State
+  # Table 1 = NSW (state 1), Table 3 = QLD (state 3)
+  read_mb_sheet <- function(sheet) {
+    readxl::read_excel(xlsx_path, sheet = sheet, skip = 5) |>
+      filter(!is.na(.data$MB_CODE_2021))
   }
+  pop <- bind_rows(
+    read_mb_sheet("Table 1"),
+    read_mb_sheet("Table 3")
+  )
   pop |>
-    select(mb_code = !!sym(mb_col), population = !!sym(pop_col)) |>
+    select(mb_code = MB_CODE_2021, population = Person) |>
     mutate(mb_code = as.character(mb_code), population = as.numeric(population))
 }

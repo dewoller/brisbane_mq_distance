@@ -1,5 +1,5 @@
 # ABOUTME: Visualization functions for travel analysis results
-# ABOUTME: Produces violin plots (ggplot2), leaflet map, and gt summary table
+# ABOUTME: Produces violin plots (ggplot2), leaflet maps (travel time + population), and gt summary table
 
 library(ggplot2)
 library(dplyr)
@@ -9,18 +9,36 @@ library(gt)
 library(RColorBrewer)
 library(htmlwidgets)
 
+# Consistent location colours: Current = blue, Candidates = green + orange
+# Order matches location_id: loc_1 = Annerley (Candidate), loc_2 = Riverhills (Candidate), loc_3 = Fortitude Valley (Current)
+location_colors <- function(locations) {
+  role_colors <- c("Current" = "#377eb8", "Candidate" = NA)
+  candidate_palette <- c("#ff7f00", "#4daf4a")  # orange, green
+  cand_i <- 1
+  colors <- character(nrow(locations))
+  for (i in seq_len(nrow(locations))) {
+    if (locations$role[i] == "Current") {
+      colors[i] <- "#377eb8"  # blue
+    } else {
+      colors[i] <- candidate_palette[cand_i]
+      cand_i <- cand_i + 1
+    }
+  }
+  colors
+}
+
 make_violin_plots <- function(mb_routes, locations) {
+  loc_info <- locations |> st_drop_geometry() |> select(location_id, name, role)
+  loc_colors <- setNames(location_colors(locations), paste0(loc_info$name, "\n(", loc_info$role, ")"))
+
   plot_data <- mb_routes |>
-    left_join(
-      locations |> st_drop_geometry() |> select(location_id, name, role),
-      by = "location_id"
-    ) |>
+    left_join(loc_info, by = "location_id") |>
     mutate(label = paste0(name, "\n(", role, ")") |> factor())
 
   p <- ggplot(plot_data, aes(x = label, y = duration_min, weight = spread_individuals)) +
     geom_violin(aes(fill = label), alpha = 0.7, scale = "width") +
     geom_boxplot(width = 0.15, outlier.shape = NA, alpha = 0.5) +
-    scale_fill_brewer(palette = "Set2") +
+    scale_fill_manual(values = loc_colors) +
     labs(
       title = "Travel Time Distribution to Each Location",
       subtitle = "Weighted by client population spread across mesh blocks",
@@ -92,6 +110,8 @@ make_map <- function(poa_boundaries, postcode_location_stats, locations, filtere
     ) |>
     st_drop_geometry()
 
+  loc_cols <- location_colors(locations)
+
   m <- leaflet() |>
     addTiles() |>
     addPolygons(
@@ -105,7 +125,8 @@ make_map <- function(poa_boundaries, postcode_location_stats, locations, filtere
     addCircleMarkers(
       lng = loc_data$lon, lat = loc_data$lat,
       radius = 10,
-      color = c("#e41a1c", "#377eb8", "#4daf4a"),
+      color = loc_cols,
+      fillColor = loc_cols,
       fillOpacity = 1,
       popup = loc_data$popup
     ) |>
@@ -114,9 +135,81 @@ make_map <- function(poa_boundaries, postcode_location_stats, locations, filtere
       pal = pal,
       values = poa_with_stats$best_duration,
       title = "Travel Time (min)<br/>to nearest location"
+    ) |>
+    addLegend(
+      position = "bottomleft",
+      colors = loc_cols,
+      labels = paste0(loc_data$name, " (", loc_data$role, ")"),
+      title = "Locations"
     )
 
   out_path <- "output/map.html"
+  dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+  saveWidget(m, file = normalizePath(out_path, mustWork = FALSE), selfcontained = TRUE)
+  out_path
+}
+
+make_population_map <- function(poa_boundaries, filtered_postcodes, locations) {
+  poa_code_col <- grep("POA_CODE", names(poa_boundaries), value = TRUE, ignore.case = TRUE)[1]
+  poa <- poa_boundaries |>
+    rename(postcode = !!sym(poa_code_col)) |>
+    mutate(postcode = as.character(postcode)) |>
+    filter(postcode %in% filtered_postcodes$postcode) |>
+    left_join(filtered_postcodes, by = "postcode")
+
+  pal <- colorNumeric(
+    palette = "YlGnBu",
+    domain = poa$n_individuals,
+    na.color = "#cccccc"
+  )
+
+  loc_data <- locations |>
+    mutate(
+      coords = st_coordinates(geometry) |> as_tibble(),
+      lon = coords$X,
+      lat = coords$Y,
+      popup = paste0("<strong>", name, "</strong><br/>", address, "<br/>Role: ", role)
+    ) |>
+    st_drop_geometry()
+
+  loc_cols <- location_colors(locations)
+
+  m <- leaflet() |>
+    addTiles() |>
+    addPolygons(
+      data = poa,
+      fillColor = ~pal(n_individuals),
+      fillOpacity = 0.6,
+      weight = 1,
+      color = "#333",
+      popup = ~paste0(
+        "<strong>Postcode: ", postcode, "</strong><br/>",
+        "Individuals: ", n_individuals, "<br/>",
+        "Households: ", n_households
+      )
+    ) |>
+    addCircleMarkers(
+      lng = loc_data$lon, lat = loc_data$lat,
+      radius = 10,
+      color = loc_cols,
+      fillColor = loc_cols,
+      fillOpacity = 1,
+      popup = loc_data$popup
+    ) |>
+    addLegend(
+      position = "bottomright",
+      pal = pal,
+      values = poa$n_individuals,
+      title = "Individuals"
+    ) |>
+    addLegend(
+      position = "bottomleft",
+      colors = loc_cols,
+      labels = paste0(loc_data$name, " (", loc_data$role, ")"),
+      title = "Locations"
+    )
+
+  out_path <- "output/population_map.html"
   dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
   saveWidget(m, file = normalizePath(out_path, mustWork = FALSE), selfcontained = TRUE)
   out_path

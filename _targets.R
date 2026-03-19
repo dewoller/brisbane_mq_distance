@@ -76,15 +76,10 @@ list(
   tar_target(geo_community_matrix, build_geo_full_matrix(geo_community_routes)),
   tar_target(geo_families_matrix, build_geo_full_matrix(geo_families_routes)),
 
-  # --- SA boundaries for zoom ---
-  tar_target(geo_sa3_boundaries, load_sa_boundaries("data/abs", "SA3")),
-  tar_target(geo_sa2_boundaries, load_sa_boundaries("data/abs", "SA2")),
-  tar_target(geo_sa1_boundaries, load_sa_boundaries("data/abs", "SA1")),
+  # --- All mesh blocks within 50km for optimal location ---
   tar_target(geo_mb_boundaries_all, load_mb_boundaries_all("data/abs")),
-
-  # --- Progressive zoom ---
-  tar_target(geo_community_zoom, run_progressive_zoom(geo_community, geo_sa3_boundaries, geo_sa2_boundaries, geo_sa1_boundaries, geo_mb_boundaries_all)),
-  tar_target(geo_families_zoom, run_progressive_zoom(geo_families, geo_sa3_boundaries, geo_sa2_boundaries, geo_sa1_boundaries, geo_mb_boundaries_all)),
+  tar_target(geo_community_zoom, route_all_mb_within_radius(geo_community, geo_mb_boundaries_all, radius_km = 50)),
+  tar_target(geo_families_zoom, route_all_mb_within_radius(geo_families, geo_mb_boundaries_all, radius_km = 50)),
 
   # --- CSV exports ---
   tar_target(geo_community_stats_csv, write_csv_output(geo_community_stats, "output/geo_community_stats.csv"), format = "file"),

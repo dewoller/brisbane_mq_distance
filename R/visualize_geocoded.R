@@ -171,8 +171,22 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
       inner_join(results |> mutate(area_code = as.character(area_code)), by = "area_code")
   }
 
-  sa1_sf <- join_results(sa1_boundaries, sa1_code_col, zoom_result$sa1)
+  sa1_sf_all <- join_results(sa1_boundaries, sa1_code_col, zoom_result$sa1)
   mb_sf <- join_results(mb_boundaries, mb_code_col, zoom_result$mb)
+
+  # Only show SA1s that contain routed mesh blocks
+  mb_in_sa1_col <- grep("SA1_CODE", names(mb_boundaries), value = TRUE, ignore.case = TRUE)[1]
+  sa1s_with_mbs <- mb_sf |>
+    st_drop_geometry() |>
+    left_join(
+      mb_boundaries |> st_drop_geometry() |>
+        select(area_code = !!sym(mb_code_col), sa1_code = !!sym(mb_in_sa1_col)) |>
+        mutate(area_code = as.character(area_code)),
+      by = "area_code"
+    ) |>
+    pull(sa1_code) |>
+    unique()
+  sa1_sf <- sa1_sf_all |> filter(as.character(!!sym(sa1_code_col)) %in% sa1s_with_mbs)
 
   # Per-level palettes
   pal_sa1 <- colorNumeric(palette = "YlOrRd", domain = sa1_sf$mean_duration_min, na.color = "#ccc")

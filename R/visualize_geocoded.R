@@ -180,10 +180,11 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
   sa1_sf <- join_results(sa1_boundaries, sa1_code_col, zoom_result$sa1)
   mb_sf <- join_results(mb_boundaries, mb_code_col, zoom_result$mb)
 
-  # Common palette across all levels
-  all_durations <- c(sa3_sf$mean_duration_min, sa2_sf$mean_duration_min,
-                     sa1_sf$mean_duration_min, mb_sf$mean_duration_min)
-  pal <- colorNumeric(palette = "YlOrRd", domain = range(all_durations, na.rm = TRUE))
+  # Per-level palettes so each zoom level shows its own variation
+  pal_sa3 <- colorNumeric(palette = "YlOrRd", domain = sa3_sf$mean_duration_min, na.color = "#ccc")
+  pal_sa2 <- colorNumeric(palette = "YlOrRd", domain = sa2_sf$mean_duration_min, na.color = "#ccc")
+  pal_sa1 <- colorNumeric(palette = "YlOrRd", domain = sa1_sf$mean_duration_min, na.color = "#ccc")
+  pal_mb  <- colorNumeric(palette = "YlOrRd", domain = mb_sf$mean_duration_min, na.color = "#ccc")
 
   make_popup <- function(code, dur) {
     paste0("Area: ", code, "<br/>Mean travel: ", round(dur, 1), " min")
@@ -191,16 +192,16 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
 
   m <- leaflet() |>
     addProviderTiles(providers$CartoDB.Positron) |>
-    addPolygons(data = sa3_sf, fillColor = ~pal(mean_duration_min), fillOpacity = 0.5,
+    addPolygons(data = sa3_sf, fillColor = ~pal_sa3(mean_duration_min), fillOpacity = 0.5,
                 weight = 1, color = "#333", group = "SA3",
                 popup = ~make_popup(area_code, mean_duration_min)) |>
-    addPolygons(data = sa2_sf, fillColor = ~pal(mean_duration_min), fillOpacity = 0.5,
+    addPolygons(data = sa2_sf, fillColor = ~pal_sa2(mean_duration_min), fillOpacity = 0.5,
                 weight = 1, color = "#555", group = "SA2",
                 popup = ~make_popup(area_code, mean_duration_min)) |>
-    addPolygons(data = sa1_sf, fillColor = ~pal(mean_duration_min), fillOpacity = 0.6,
+    addPolygons(data = sa1_sf, fillColor = ~pal_sa1(mean_duration_min), fillOpacity = 0.6,
                 weight = 1, color = "#777", group = "SA1",
                 popup = ~make_popup(area_code, mean_duration_min)) |>
-    addPolygons(data = mb_sf, fillColor = ~pal(mean_duration_min), fillOpacity = 0.7,
+    addPolygons(data = mb_sf, fillColor = ~pal_mb(mean_duration_min), fillOpacity = 0.7,
                 weight = 1, color = "#999", group = "Mesh Blocks",
                 popup = ~make_popup(area_code, mean_duration_min)) |>
     addCircleMarkers(
@@ -213,8 +214,10 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
       options = layersControlOptions(collapsed = FALSE)
     ) |>
     hideGroup(c("SA3", "SA2", "SA1")) |>
-    addLegend(position = "bottomright", pal = pal, values = all_durations,
-              title = "Mean Travel Time (min)")
+    addLegend(position = "bottomright", pal = pal_mb, values = mb_sf$mean_duration_min,
+              title = "Mesh Block<br/>Mean Travel (min)") |>
+    addLegend(position = "bottomleft", pal = pal_sa3, values = sa3_sf$mean_duration_min,
+              title = "SA3<br/>Mean Travel (min)")
 
   dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
   saveWidget(m, file = normalizePath(output_path, mustWork = FALSE), selfcontained = TRUE)

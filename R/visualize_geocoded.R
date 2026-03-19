@@ -211,3 +211,76 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
   saveWidget(m, file = normalizePath(output_path, mustWork = FALSE), selfcontained = TRUE)
   output_path
 }
+
+make_combined_zoom_map <- function(community_zoom, families_zoom, locations, output_path) {
+  loc_data <- locations |>
+    mutate(
+      coords = st_coordinates(geometry) |> as_tibble(),
+      lon = coords$X,
+      lat = coords$Y,
+      popup = paste0("<strong>", name, "</strong><br/>", address, "<br/>Role: ", role)
+    ) |>
+    st_drop_geometry()
+  loc_cols <- location_colors(locations)
+
+  mb_boundaries <- load_mb_boundaries_all("data/abs")
+  mb_code_col <- grep("MB_CODE", names(mb_boundaries), value = TRUE, ignore.case = TRUE)[1]
+
+  prep_mb <- function(zoom_result) {
+    mb_boundaries |>
+      mutate(area_code = as.character(!!sym(mb_code_col))) |>
+      inner_join(zoom_result$mb |> mutate(area_code = as.character(area_code)), by = "area_code")
+  }
+
+  comm_sf <- prep_mb(community_zoom)
+  fam_sf <- prep_mb(families_zoom)
+
+  # Shared palette based on both populations
+  global_min <- floor(min(c(comm_sf$mean_duration_min, fam_sf$mean_duration_min)))
+  global_max <- global_min + 10
+
+  pal <- colorBin(
+    palette = "RdYlGn",
+    domain = c(global_min, global_max),
+    bins = seq(global_min, global_max, by = 1),
+    reverse = TRUE
+  )
+
+  add_population_layers <- function(m, mb_sf, group_name) {
+    coloured <- mb_sf |> filter(mean_duration_min <= global_max)
+    grey <- mb_sf |> filter(mean_duration_min > global_max)
+    m |>
+      addPolygons(data = grey, fillColor = "#cccccc", fillOpacity = 0.3,
+                  weight = 0.3, color = "#bbb", group = group_name,
+                  popup = ~paste0("MB: ", area_code, "<br/>Mean travel: ",
+                                  round(mean_duration_min, 1), " min")) |>
+      addPolygons(data = coloured, fillColor = ~pal(mean_duration_min), fillOpacity = 0.8,
+                  weight = 0.5, color = "#666", group = group_name,
+                  popup = ~paste0("MB: ", area_code, "<br/>Mean travel: ",
+                                  round(mean_duration_min, 1), " min"))
+  }
+
+  m <- leaflet() |>
+    addProviderTiles(providers$CartoDB.Positron)
+  m <- add_population_layers(m, comm_sf, "Community")
+  m <- add_population_layers(m, fam_sf, "Families (3+)")
+  m <- m |>
+    addCircleMarkers(
+      lng = loc_data$lon, lat = loc_data$lat,
+      radius = 10, color = loc_cols, fillColor = loc_cols, fillOpacity = 1,
+      popup = loc_data$popup, group = "Existing Locations"
+    ) |>
+    addLayersControl(
+      baseGroups = c("Community", "Families (3+)"),
+      overlayGroups = "Existing Locations",
+      options = layersControlOptions(collapsed = FALSE)
+    ) |>
+    addLegend(position = "bottomright", pal = pal,
+              values = seq(global_min, global_max),
+              title = paste0("Mean Travel Time (min)<br/>",
+                             global_min, "-", global_max, " min"))
+
+  dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
+  saveWidget(m, file = normalizePath(output_path, mustWork = FALSE), selfcontained = TRUE)
+  output_path
+}

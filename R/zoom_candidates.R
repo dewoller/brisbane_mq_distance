@@ -28,7 +28,8 @@ route_population_to_centroids <- function(individuals_sf, candidate_centroids,
 
   cand_data <- candidate_centroids |>
     st_drop_geometry() |>
-    select(area_code = !!sym(area_code_col), lon = centroid_lon, lat = centroid_lat)
+    select(area_code = !!sym(area_code_col), lon = centroid_lon, lat = centroid_lat) |>
+    filter(!is.na(lon), !is.na(lat))
 
   # Batch candidates (destinations) in groups of 20, sources in groups of 75
   dest_batch_size <- 20

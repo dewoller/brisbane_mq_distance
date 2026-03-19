@@ -109,16 +109,16 @@ run_progressive_zoom <- function(individuals_sf, sa3_boundaries, sa2_boundaries,
     filter(!!sym(sa2_in_sa3_col) %in% sa3_survivors) |>
     rename(area_code = !!sym(sa2_code_col))
   sa2_results <- route_population_to_centroids(individuals_sf, sa2_candidates, "area_code", osrm_url)
-  sa2_survivors <- zoom_filter(sa2_results, 0.20)
+  sa2_survivors <- zoom_filter(sa2_results, 0.30)
   message("SA2: ", length(sa2_survivors), " of ", nrow(sa2_results), " survive")
 
-  # --- Level 3: SA1 within surviving SA2s (keep 20%) ---
+  # --- Level 3: SA1 within surviving SA2s (keep 30%) ---
   message("=== Zoom Level 3: SA1 ===")
   sa1_candidates <- sa1_boundaries |>
     filter(!!sym(sa1_in_sa2_col) %in% sa2_survivors) |>
     rename(area_code = !!sym(sa1_code_col))
   sa1_results <- route_population_to_centroids(individuals_sf, sa1_candidates, "area_code", osrm_url)
-  sa1_survivors <- zoom_filter(sa1_results, 0.20)
+  sa1_survivors <- zoom_filter(sa1_results, 0.30)
   message("SA1: ", length(sa1_survivors), " of ", nrow(sa1_results), " survive")
 
   # --- Level 4: ALL mesh blocks within surviving SA1s ---
@@ -143,9 +143,9 @@ run_progressive_zoom <- function(individuals_sf, sa3_boundaries, sa2_boundaries,
     mutate(rank = row_number())
 
   list(
-    sa3 = sa3_results,
-    sa2 = sa2_results,
-    sa1 = sa1_results,
+    sa3 = sa3_results |> filter(area_code %in% sa3_survivors),
+    sa2 = sa2_results |> filter(area_code %in% sa2_survivors),
+    sa1 = sa1_results |> filter(area_code %in% sa1_survivors),
     mb = mb_results,
     ranking = ranking
   )

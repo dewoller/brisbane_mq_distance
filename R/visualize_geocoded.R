@@ -167,7 +167,7 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
     inner_join(zoom_result$mb |> mutate(area_code = as.character(area_code)), by = "area_code")
 
   # Cap colour scale at 50 min so the useful variation is visible
-  max_duration <- 50
+  max_duration <- 30
   mb_sf <- mb_sf |>
     mutate(display_duration = pmin(mean_duration_min, max_duration))
   pal_mb <- colorNumeric(palette = "YlOrRd", domain = c(0, max_duration), na.color = "#ccc")

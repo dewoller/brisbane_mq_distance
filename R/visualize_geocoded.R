@@ -166,11 +166,15 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
     mutate(area_code = as.character(!!sym(mb_code_col))) |>
     inner_join(zoom_result$mb |> mutate(area_code = as.character(area_code)), by = "area_code")
 
-  pal_mb <- colorNumeric(palette = "YlOrRd", domain = mb_sf$mean_duration_min, na.color = "#ccc")
+  # Cap colour scale at 50 min so the useful variation is visible
+  max_duration <- 50
+  mb_sf <- mb_sf |>
+    mutate(display_duration = pmin(mean_duration_min, max_duration))
+  pal_mb <- colorNumeric(palette = "YlOrRd", domain = c(0, max_duration), na.color = "#ccc")
 
   m <- leaflet() |>
     addProviderTiles(providers$CartoDB.Positron) |>
-    addPolygons(data = mb_sf, fillColor = ~pal_mb(mean_duration_min), fillOpacity = 0.7,
+    addPolygons(data = mb_sf, fillColor = ~pal_mb(display_duration), fillOpacity = 0.7,
                 weight = 0.5, color = "#999", group = "Mesh Blocks",
                 popup = ~paste0("MB: ", area_code, "<br/>Mean travel: ",
                                 round(mean_duration_min, 1), " min")) |>

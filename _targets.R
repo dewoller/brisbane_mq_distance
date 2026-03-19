@@ -58,7 +58,8 @@ list(
   # --- Geocoding ---
   tar_target(geo_raw_data, read_geocoded_data("data/Brisbane Family data March 2026.xlsx")),
   tar_target(geo_address_lookup, geocode_addresses(geo_raw_data)),
-  tar_target(geo_individuals, assign_locations(geo_raw_data, geo_address_lookup, poa_boundaries)),
+  tar_target(geo_individuals_raw, assign_locations(geo_raw_data, geo_address_lookup, poa_boundaries)),
+  tar_target(geo_individuals, filter_outlier_individuals(geo_individuals_raw, max_distance_km = 150)),
 
   # --- Family classification ---
   tar_target(geo_classified, classify_households(geo_individuals)),

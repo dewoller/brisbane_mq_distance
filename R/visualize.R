@@ -113,7 +113,7 @@ make_map <- function(poa_boundaries, postcode_location_stats, locations, filtere
   loc_cols <- location_colors(locations)
 
   m <- leaflet() |>
-    addTiles() |>
+    addProviderTiles(providers$CartoDB.Positron) |>
     addPolygons(
       data = poa_with_stats,
       fillColor = ~pal(best_duration),
@@ -175,7 +175,7 @@ make_population_map <- function(poa_boundaries, filtered_postcodes, locations) {
   loc_cols <- location_colors(locations)
 
   m <- leaflet() |>
-    addTiles() |>
+    addProviderTiles(providers$CartoDB.Positron) |>
     addPolygons(
       data = poa,
       fillColor = ~pal(n_individuals),

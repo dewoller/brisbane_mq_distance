@@ -69,7 +69,7 @@ make_geo_point_map <- function(individuals_sf, routes, locations, output_path) {
   loc_cols <- location_colors(locations)
 
   m <- leaflet() |>
-    addTiles() |>
+    addProviderTiles(providers$CartoDB.Positron) |>
     addCircleMarkers(
       lng = ind_data$ind_lon, lat = ind_data$ind_lat,
       radius = 5,
@@ -190,7 +190,7 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
   }
 
   m <- leaflet() |>
-    addTiles() |>
+    addProviderTiles(providers$CartoDB.Positron) |>
     addPolygons(data = sa3_sf, fillColor = ~pal(mean_duration_min), fillOpacity = 0.5,
                 weight = 1, color = "#333", group = "SA3",
                 popup = ~make_popup(area_code, mean_duration_min)) |>

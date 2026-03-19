@@ -73,3 +73,19 @@ assign_locations <- function(raw_data, geocoded_lookup, poa_boundaries) {
 
   result
 }
+
+filter_outlier_individuals <- function(geo_individuals, max_distance_km = 150) {
+  # Compute mean centre of all individuals
+  coords <- st_coordinates(geo_individuals)
+  mean_centre <- st_sfc(st_point(c(mean(coords[, 1]), mean(coords[, 2]))), crs = 4326)
+
+  # Calculate distance from mean centre for each individual
+  dists_km <- as.numeric(st_distance(geo_individuals, mean_centre)) / 1000
+  n_before <- nrow(geo_individuals)
+  result <- geo_individuals |> filter(dists_km <= max_distance_km)
+  n_removed <- n_before - nrow(result)
+  if (n_removed > 0) {
+    message("Removed ", n_removed, " individuals > ", max_distance_km, "km from group centroid")
+  }
+  result
+}

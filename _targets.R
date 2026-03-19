@@ -80,10 +80,11 @@ list(
   tar_target(geo_sa3_boundaries, load_sa_boundaries("data/abs", "SA3")),
   tar_target(geo_sa2_boundaries, load_sa_boundaries("data/abs", "SA2")),
   tar_target(geo_sa1_boundaries, load_sa_boundaries("data/abs", "SA1")),
+  tar_target(geo_mb_boundaries_all, load_mb_boundaries_all("data/abs")),
 
   # --- Progressive zoom ---
-  tar_target(geo_community_zoom, run_progressive_zoom(geo_community, geo_sa3_boundaries, geo_sa2_boundaries, geo_sa1_boundaries, mb_boundaries)),
-  tar_target(geo_families_zoom, run_progressive_zoom(geo_families, geo_sa3_boundaries, geo_sa2_boundaries, geo_sa1_boundaries, mb_boundaries)),
+  tar_target(geo_community_zoom, run_progressive_zoom(geo_community, geo_sa3_boundaries, geo_sa2_boundaries, geo_sa1_boundaries, geo_mb_boundaries_all)),
+  tar_target(geo_families_zoom, run_progressive_zoom(geo_families, geo_sa3_boundaries, geo_sa2_boundaries, geo_sa1_boundaries, geo_mb_boundaries_all)),
 
   # --- CSV exports ---
   tar_target(geo_community_stats_csv, write_csv_output(geo_community_stats, "output/geo_community_stats.csv"), format = "file"),

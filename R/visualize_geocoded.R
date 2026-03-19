@@ -158,10 +158,12 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
     st_drop_geometry()
   loc_cols <- location_colors(locations)
 
-  # Load boundaries to join geometry back to results (SA1 and MB only)
+  # Load boundaries to join geometry back to results (SA2, SA1, and all MB)
+  sa2_boundaries <- load_sa_boundaries("data/abs", "SA2")
   sa1_boundaries <- load_sa_boundaries("data/abs", "SA1")
-  mb_boundaries <- load_mb_boundaries("data/abs")
+  mb_boundaries <- load_mb_boundaries_all("data/abs")
 
+  sa2_code_col <- grep("SA2_CODE", names(sa2_boundaries), value = TRUE, ignore.case = TRUE)[1]
   sa1_code_col <- grep("SA1_CODE", names(sa1_boundaries), value = TRUE, ignore.case = TRUE)[1]
   mb_code_col <- grep("MB_CODE", names(mb_boundaries), value = TRUE, ignore.case = TRUE)[1]
 
@@ -171,24 +173,12 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
       inner_join(results |> mutate(area_code = as.character(area_code)), by = "area_code")
   }
 
-  sa1_sf_all <- join_results(sa1_boundaries, sa1_code_col, zoom_result$sa1)
+  sa2_sf <- join_results(sa2_boundaries, sa2_code_col, zoom_result$sa2)
+  sa1_sf <- join_results(sa1_boundaries, sa1_code_col, zoom_result$sa1)
   mb_sf <- join_results(mb_boundaries, mb_code_col, zoom_result$mb)
 
-  # Only show SA1s that contain routed mesh blocks
-  mb_in_sa1_col <- grep("SA1_CODE", names(mb_boundaries), value = TRUE, ignore.case = TRUE)[1]
-  sa1s_with_mbs <- mb_sf |>
-    st_drop_geometry() |>
-    left_join(
-      mb_boundaries |> st_drop_geometry() |>
-        select(area_code = !!sym(mb_code_col), sa1_code = !!sym(mb_in_sa1_col)) |>
-        mutate(area_code = as.character(area_code)),
-      by = "area_code"
-    ) |>
-    pull(sa1_code) |>
-    unique()
-  sa1_sf <- sa1_sf_all |> filter(as.character(!!sym(sa1_code_col)) %in% sa1s_with_mbs)
-
   # Per-level palettes
+  pal_sa2 <- colorNumeric(palette = "YlOrRd", domain = sa2_sf$mean_duration_min, na.color = "#ccc")
   pal_sa1 <- colorNumeric(palette = "YlOrRd", domain = sa1_sf$mean_duration_min, na.color = "#ccc")
   pal_mb  <- colorNumeric(palette = "YlOrRd", domain = mb_sf$mean_duration_min, na.color = "#ccc")
 
@@ -198,6 +188,9 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
 
   m <- leaflet() |>
     addProviderTiles(providers$CartoDB.Positron) |>
+    addPolygons(data = sa2_sf, fillColor = ~pal_sa2(mean_duration_min), fillOpacity = 0.4,
+                weight = 1, color = "#333", group = "SA2",
+                popup = ~make_popup(area_code, mean_duration_min)) |>
     addPolygons(data = sa1_sf, fillColor = ~pal_sa1(mean_duration_min), fillOpacity = 0.5,
                 weight = 1, color = "#555", group = "SA1",
                 popup = ~make_popup(area_code, mean_duration_min)) |>
@@ -210,14 +203,12 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
       popup = loc_data$popup, group = "Existing Locations"
     ) |>
     addLayersControl(
-      overlayGroups = c("SA1", "Mesh Blocks", "Existing Locations"),
+      overlayGroups = c("SA2", "SA1", "Mesh Blocks", "Existing Locations"),
       options = layersControlOptions(collapsed = FALSE)
     ) |>
-    hideGroup("SA1") |>
+    hideGroup(c("SA2", "SA1")) |>
     addLegend(position = "bottomright", pal = pal_mb, values = mb_sf$mean_duration_min,
-              title = "Mesh Block<br/>Mean Travel (min)") |>
-    addLegend(position = "bottomleft", pal = pal_sa1, values = sa1_sf$mean_duration_min,
-              title = "SA1<br/>Mean Travel (min)")
+              title = "Mesh Block<br/>Mean Travel (min)")
 
   dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
   saveWidget(m, file = normalizePath(output_path, mustWork = FALSE), selfcontained = TRUE)

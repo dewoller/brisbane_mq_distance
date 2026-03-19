@@ -151,6 +151,34 @@ load_mb_population <- function(abs_dir = "data/abs") {
     mutate(mb_code = as.character(mb_code), population = as.numeric(population))
 }
 
+# Load all Mesh Block 2021 boundaries for QLD (all land use categories)
+# Unlike load_mb_boundaries which filters to residential only, this includes
+# commercial, industrial, parkland, etc. for candidate location analysis.
+load_mb_boundaries_all <- function(abs_dir = "data/abs") {
+  shp_files <- list.files(abs_dir, pattern = "MB_2021.*\\.shp$", full.names = TRUE, recursive = TRUE)
+  if (length(shp_files) == 0) {
+    zip_url <- "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/MB_2021_AUST_SHP_GDA2020.zip"
+    zip_path <- file.path(abs_dir, "MB_2021_AUST_SHP_GDA2020.zip")
+    tryCatch(
+      download_if_missing(zip_url, zip_path),
+      error = function(e) {
+        stop(
+          "Could not download MB boundaries. Please download manually from:\n",
+          "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files\n",
+          "Save the MB shapefile zip to: ", zip_path
+        )
+      }
+    )
+    extract_zip(zip_path, file.path(abs_dir, "mb_shp"))
+    shp_files <- list.files(abs_dir, pattern = "MB_2021.*\\.shp$", full.names = TRUE, recursive = TRUE)
+  }
+  if (length(shp_files) == 0) stop("No MB shapefile found in ", abs_dir)
+  mb <- st_read(shp_files[1], quiet = TRUE)
+  ste_col <- grep("STE_CODE|STATE_CODE", names(mb), value = TRUE, ignore.case = TRUE)[1]
+  if (is.na(ste_col)) stop("No state code column found in MB boundaries")
+  mb |> filter(!!sym(ste_col) %in% c("3"))
+}
+
 # Load SA-level (SA1, SA2, SA3) boundaries for QLD
 # Returns sf object with centroid coordinates appended
 load_sa_boundaries <- function(abs_dir = "data/abs", level = "SA3") {

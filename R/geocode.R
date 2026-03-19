@@ -15,3 +15,24 @@ read_geocoded_data <- function(path) {
     mutate(postcode = as.character(as.integer(postcode))) |>
     filter(!is.na(postcode))
 }
+
+geocode_addresses <- function(raw_data) {
+  unique_addresses <- raw_data |>
+    filter(!is.na(address)) |>
+    distinct(address, suburb, postcode, .keep_all = FALSE) |>
+    mutate(
+      full_address = paste(address, suburb, "Queensland", postcode, sep = ", ")
+    )
+
+  geocoded <- unique_addresses |>
+    tidygeocoder::geocode(
+      address = full_address,
+      method = "arcgis",
+      lat = "geo_lat",
+      long = "geo_lon"
+    )
+
+  geocoded |>
+    mutate(geo_success = !is.na(geo_lon) & !is.na(geo_lat)) |>
+    select(address, suburb, postcode, geo_lon, geo_lat, geo_success)
+}

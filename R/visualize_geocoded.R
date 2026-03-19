@@ -166,16 +166,31 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
     mutate(area_code = as.character(!!sym(mb_code_col))) |>
     inner_join(zoom_result$mb |> mutate(area_code = as.character(area_code)), by = "area_code")
 
-  # Cap colour scale at 50 min so the useful variation is visible
-  max_duration <- 30
-  mb_sf <- mb_sf |>
-    mutate(display_duration = pmin(mean_duration_min, max_duration))
-  pal_mb <- colorNumeric(palette = "YlOrRd", domain = c(0, max_duration), na.color = "#ccc")
+  # 10 distinct colours from minimum travel time, 1 minute each
+  # Mesh blocks beyond the range are not coloured (transparent)
+  min_time <- floor(min(mb_sf$mean_duration_min))
+  max_time <- min_time + 10
+  n_bins <- 10
+
+  # Split into coloured (within range) and uncoloured (above range)
+  mb_coloured <- mb_sf |> filter(mean_duration_min <= max_time)
+  mb_grey <- mb_sf |> filter(mean_duration_min > max_time)
+
+  pal_mb <- colorBin(
+    palette = "RdYlGn",
+    domain = c(min_time, max_time),
+    bins = seq(min_time, max_time, by = 1),
+    reverse = TRUE
+  )
 
   m <- leaflet() |>
     addProviderTiles(providers$CartoDB.Positron) |>
-    addPolygons(data = mb_sf, fillColor = ~pal_mb(display_duration), fillOpacity = 0.7,
-                weight = 0.5, color = "#999", group = "Mesh Blocks",
+    addPolygons(data = mb_grey, fillColor = "#cccccc", fillOpacity = 0.3,
+                weight = 0.3, color = "#bbb", group = "Mesh Blocks",
+                popup = ~paste0("MB: ", area_code, "<br/>Mean travel: ",
+                                round(mean_duration_min, 1), " min")) |>
+    addPolygons(data = mb_coloured, fillColor = ~pal_mb(mean_duration_min), fillOpacity = 0.8,
+                weight = 0.5, color = "#666", group = "Mesh Blocks",
                 popup = ~paste0("MB: ", area_code, "<br/>Mean travel: ",
                                 round(mean_duration_min, 1), " min")) |>
     addCircleMarkers(
@@ -187,8 +202,10 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
       overlayGroups = c("Mesh Blocks", "Existing Locations"),
       options = layersControlOptions(collapsed = FALSE)
     ) |>
-    addLegend(position = "bottomright", pal = pal_mb, values = mb_sf$mean_duration_min,
-              title = "Mean Travel Time (min)")
+    addLegend(position = "bottomright", pal = pal_mb,
+              values = seq(min_time, max_time),
+              title = paste0("Mean Travel Time (min)<br/>",
+                             min_time, "-", max_time, " min range"))
 
   dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
   saveWidget(m, file = normalizePath(output_path, mustWork = FALSE), selfcontained = TRUE)

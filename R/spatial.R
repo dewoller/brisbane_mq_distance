@@ -150,3 +150,53 @@ load_mb_population <- function(abs_dir = "data/abs") {
     select(mb_code = MB_CODE_2021, population = Person) |>
     mutate(mb_code = as.character(mb_code), population = as.numeric(population))
 }
+
+# Load SA-level (SA1, SA2, SA3) boundaries for QLD
+# Returns sf object with centroid coordinates appended
+load_sa_boundaries <- function(abs_dir = "data/abs", level = "SA3") {
+  level <- toupper(level)
+  if (!level %in% c("SA1", "SA2", "SA3")) {
+    stop("level must be one of: SA1, SA2, SA3")
+  }
+
+  pattern <- paste0(level, "_2021.*\\.shp$")
+  shp_files <- list.files(abs_dir, pattern = pattern, full.names = TRUE, recursive = TRUE)
+
+  if (length(shp_files) == 0) {
+    zip_name <- paste0(level, "_2021_AUST_SHP_GDA2020.zip")
+    zip_url <- paste0(
+      "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/",
+      "jul2021-jun2026/access-and-downloads/digital-boundary-files/", zip_name
+    )
+    zip_path <- file.path(abs_dir, zip_name)
+    tryCatch(
+      download_if_missing(zip_url, zip_path),
+      error = function(e) {
+        stop(
+          "Could not download ", level, " boundaries. Please download manually from:\n",
+          "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files\n",
+          "Save the ", level, " shapefile zip to: ", zip_path
+        )
+      }
+    )
+    extract_zip(zip_path, file.path(abs_dir, paste0(tolower(level), "_shp")))
+    shp_files <- list.files(abs_dir, pattern = pattern, full.names = TRUE, recursive = TRUE)
+  }
+
+  if (length(shp_files) == 0) stop("No ", level, " shapefile found in ", abs_dir)
+
+  sa <- st_read(shp_files[1], quiet = TRUE)
+
+  # Filter to QLD (state code 3)
+  ste_col <- grep("STE_CODE|STATE_CODE", names(sa), value = TRUE, ignore.case = TRUE)[1]
+  if (!is.na(ste_col)) {
+    sa <- sa |> filter(!!sym(ste_col) %in% c("3"))
+  }
+
+  # Compute and append centroids
+  centroids <- st_centroid(sa)
+  sa$centroid_lon <- st_coordinates(centroids)[, 1]
+  sa$centroid_lat <- st_coordinates(centroids)[, 2]
+
+  sa
+}

@@ -51,5 +51,53 @@ list(
   tar_target(violin_plot, make_violin_plots(mb_routes, locations), format = "file"),
   tar_target(map_html, make_map(poa_boundaries, postcode_location_stats, locations, filtered_postcodes), format = "file"),
   tar_target(population_map_html, make_population_map(poa_boundaries, filtered_postcodes, locations), format = "file"),
-  tar_target(summary_table_gt, make_summary_table_gt(location_summary, locations), format = "file")
+  tar_target(summary_table_gt, make_summary_table_gt(location_summary, locations), format = "file"),
+
+  # === Geocoded address-level analysis ===
+
+  # --- Geocoding ---
+  tar_target(geo_raw_data, read_geocoded_data("data/Brisbane Family data March 2026.xlsx")),
+  tar_target(geo_address_lookup, geocode_addresses(geo_raw_data)),
+  tar_target(geo_individuals, assign_locations(geo_raw_data, geo_address_lookup, poa_boundaries)),
+
+  # --- Family classification ---
+  tar_target(geo_classified, classify_households(geo_individuals)),
+  tar_target(geo_community, geo_classified),
+  tar_target(geo_families, geo_classified |> dplyr::filter(is_family)),
+
+  # --- Routing to 3 locations ---
+  tar_target(geo_community_routes, route_individuals_to_locations(geo_community, locations)),
+  tar_target(geo_families_routes, route_individuals_to_locations(geo_families, locations)),
+
+  # --- Aggregation ---
+  tar_target(geo_community_stats, aggregate_geo_location(geo_community_routes)),
+  tar_target(geo_families_stats, aggregate_geo_location(geo_families_routes)),
+  tar_target(geo_community_matrix, build_geo_full_matrix(geo_community_routes)),
+  tar_target(geo_families_matrix, build_geo_full_matrix(geo_families_routes)),
+
+  # --- SA boundaries for zoom ---
+  tar_target(geo_sa3_boundaries, load_sa_boundaries("data/abs", "SA3")),
+  tar_target(geo_sa2_boundaries, load_sa_boundaries("data/abs", "SA2")),
+  tar_target(geo_sa1_boundaries, load_sa_boundaries("data/abs", "SA1")),
+
+  # --- Progressive zoom ---
+  tar_target(geo_community_zoom, run_progressive_zoom(geo_community, geo_sa3_boundaries, geo_sa2_boundaries, geo_sa1_boundaries, mb_boundaries)),
+  tar_target(geo_families_zoom, run_progressive_zoom(geo_families, geo_sa3_boundaries, geo_sa2_boundaries, geo_sa1_boundaries, mb_boundaries)),
+
+  # --- CSV exports ---
+  tar_target(geo_community_stats_csv, write_csv_output(geo_community_stats, "output/geo_community_stats.csv"), format = "file"),
+  tar_target(geo_families_stats_csv, write_csv_output(geo_families_stats, "output/geo_families_stats.csv"), format = "file"),
+  tar_target(geo_community_matrix_csv, write_csv_output(geo_community_matrix, "output/geo_community_matrix.csv"), format = "file"),
+  tar_target(geo_families_matrix_csv, write_csv_output(geo_families_matrix, "output/geo_families_matrix.csv"), format = "file"),
+  tar_target(geo_community_zoom_csv, write_csv_output(geo_community_zoom$ranking, "output/geo_community_zoom_ranking.csv"), format = "file"),
+  tar_target(geo_families_zoom_csv, write_csv_output(geo_families_zoom$ranking, "output/geo_families_zoom_ranking.csv"), format = "file"),
+
+  # --- Visualization ---
+  tar_target(geo_community_violin, make_geo_violin(geo_community_routes, locations, "output/geo_community_violin.png"), format = "file"),
+  tar_target(geo_families_violin, make_geo_violin(geo_families_routes, locations, "output/geo_families_violin.png"), format = "file"),
+  tar_target(geo_community_map, make_geo_point_map(geo_community, geo_community_routes, locations, "output/geo_community_map.html"), format = "file"),
+  tar_target(geo_families_map, make_geo_point_map(geo_families, geo_families_routes, locations, "output/geo_families_map.html"), format = "file"),
+  tar_target(geo_summary_table, make_geo_summary_table(geo_community_stats, geo_families_stats, locations), format = "file"),
+  tar_target(geo_community_zoom_map, make_zoom_map(geo_community_zoom, locations, "output/geo_community_zoom_map.html"), format = "file"),
+  tar_target(geo_families_zoom_map, make_zoom_map(geo_families_zoom, locations, "output/geo_families_zoom_map.html"), format = "file")
 )

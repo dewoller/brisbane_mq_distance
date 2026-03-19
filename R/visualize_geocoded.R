@@ -101,3 +101,122 @@ make_geo_point_map <- function(individuals_sf, routes, locations, output_path) {
   saveWidget(m, file = normalizePath(output_path, mustWork = FALSE), selfcontained = TRUE)
   output_path
 }
+
+make_geo_summary_table <- function(community_stats, families_stats, locations) {
+  loc_info <- locations |> st_drop_geometry() |> select(location_id, name, address, role)
+
+  format_stats <- function(stats, population_label) {
+    stats |>
+      left_join(loc_info, by = "location_id") |>
+      mutate(Population = population_label)
+  }
+
+  combined <- bind_rows(
+    format_stats(community_stats, "Community"),
+    format_stats(families_stats, "Families")
+  ) |>
+    select(
+      Population,
+      Location = name,
+      Role = role,
+      Individuals = n_individuals,
+      Households = n_households,
+      `Mean Distance (km)` = mean_distance_km,
+      `Mean Time (min)` = mean_duration_min,
+      `Median Time (min)` = median_duration_min,
+      `P25 (min)` = p25_duration_min,
+      `P75 (min)` = p75_duration_min,
+      `<=15 min (%)` = pct_within_15min,
+      `<=30 min (%)` = pct_within_30min,
+      `<=45 min (%)` = pct_within_45min,
+      `<=60 min (%)` = pct_within_60min
+    )
+
+  tbl <- combined |>
+    gt(groupname_col = "Population") |>
+    tab_header(
+      title = "Location Accessibility Comparison",
+      subtitle = "Based on geocoded individual addresses"
+    ) |>
+    fmt_number(columns = where(is.numeric), decimals = 1) |>
+    fmt_number(columns = c("Individuals", "Households"), decimals = 0)
+
+  out_path <- "output/geo_summary_table.html"
+  dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+  gtsave(tbl, out_path)
+  out_path
+}
+
+make_zoom_map <- function(zoom_result, locations, output_path) {
+  loc_data <- locations |>
+    mutate(
+      coords = st_coordinates(geometry) |> as_tibble(),
+      lon = coords$X,
+      lat = coords$Y,
+      popup = paste0("<strong>", name, "</strong><br/>", address, "<br/>Role: ", role)
+    ) |>
+    st_drop_geometry()
+  loc_cols <- location_colors(locations)
+
+  # Load boundaries to join geometry back to results
+  sa3_boundaries <- load_sa_boundaries("data/abs", "SA3")
+  sa2_boundaries <- load_sa_boundaries("data/abs", "SA2")
+  sa1_boundaries <- load_sa_boundaries("data/abs", "SA1")
+  mb_boundaries <- load_mb_boundaries("data/abs")
+
+  sa3_code_col <- grep("SA3_CODE", names(sa3_boundaries), value = TRUE, ignore.case = TRUE)[1]
+  sa2_code_col <- grep("SA2_CODE", names(sa2_boundaries), value = TRUE, ignore.case = TRUE)[1]
+  sa1_code_col <- grep("SA1_CODE", names(sa1_boundaries), value = TRUE, ignore.case = TRUE)[1]
+  mb_code_col <- grep("MB_CODE", names(mb_boundaries), value = TRUE, ignore.case = TRUE)[1]
+
+  join_results <- function(boundaries, code_col, results) {
+    boundaries |>
+      mutate(area_code = as.character(!!sym(code_col))) |>
+      inner_join(results |> mutate(area_code = as.character(area_code)), by = "area_code")
+  }
+
+  sa3_sf <- join_results(sa3_boundaries, sa3_code_col, zoom_result$sa3)
+  sa2_sf <- join_results(sa2_boundaries, sa2_code_col, zoom_result$sa2)
+  sa1_sf <- join_results(sa1_boundaries, sa1_code_col, zoom_result$sa1)
+  mb_sf <- join_results(mb_boundaries, mb_code_col, zoom_result$mb)
+
+  # Common palette across all levels
+  all_durations <- c(sa3_sf$mean_duration_min, sa2_sf$mean_duration_min,
+                     sa1_sf$mean_duration_min, mb_sf$mean_duration_min)
+  pal <- colorNumeric(palette = "YlOrRd", domain = range(all_durations, na.rm = TRUE))
+
+  make_popup <- function(code, dur) {
+    paste0("Area: ", code, "<br/>Mean travel: ", round(dur, 1), " min")
+  }
+
+  m <- leaflet() |>
+    addTiles() |>
+    addPolygons(data = sa3_sf, fillColor = ~pal(mean_duration_min), fillOpacity = 0.5,
+                weight = 1, color = "#333", group = "SA3",
+                popup = ~make_popup(area_code, mean_duration_min)) |>
+    addPolygons(data = sa2_sf, fillColor = ~pal(mean_duration_min), fillOpacity = 0.5,
+                weight = 1, color = "#555", group = "SA2",
+                popup = ~make_popup(area_code, mean_duration_min)) |>
+    addPolygons(data = sa1_sf, fillColor = ~pal(mean_duration_min), fillOpacity = 0.6,
+                weight = 1, color = "#777", group = "SA1",
+                popup = ~make_popup(area_code, mean_duration_min)) |>
+    addPolygons(data = mb_sf, fillColor = ~pal(mean_duration_min), fillOpacity = 0.7,
+                weight = 1, color = "#999", group = "Mesh Blocks",
+                popup = ~make_popup(area_code, mean_duration_min)) |>
+    addCircleMarkers(
+      lng = loc_data$lon, lat = loc_data$lat,
+      radius = 10, color = loc_cols, fillColor = loc_cols, fillOpacity = 1,
+      popup = loc_data$popup, group = "Existing Locations"
+    ) |>
+    addLayersControl(
+      overlayGroups = c("SA3", "SA2", "SA1", "Mesh Blocks", "Existing Locations"),
+      options = layersControlOptions(collapsed = FALSE)
+    ) |>
+    hideGroup(c("SA3", "SA2", "SA1")) |>
+    addLegend(position = "bottomright", pal = pal, values = all_durations,
+              title = "Mean Travel Time (min)")
+
+  dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
+  saveWidget(m, file = normalizePath(output_path, mustWork = FALSE), selfcontained = TRUE)
+  output_path
+}

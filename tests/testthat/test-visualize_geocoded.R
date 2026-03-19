@@ -58,3 +58,28 @@ test_that("make_geo_point_map creates an HTML file", {
     expect_true(file.exists(result))
   })
 })
+
+test_that("make_geo_summary_table creates an HTML file", {
+  locations <- get_target_locations()
+
+  stats <- tibble(
+    location_id = c("loc_1", "loc_2", "loc_3"),
+    n_individuals = c(100, 100, 100),
+    n_households = c(30, 30, 30),
+    mean_distance_km = c(10, 20, 15),
+    mean_duration_min = c(15, 25, 20),
+    median_duration_min = c(14, 24, 19),
+    p25_duration_min = c(10, 18, 14),
+    p75_duration_min = c(20, 32, 26),
+    pct_within_15min = c(50, 20, 35),
+    pct_within_30min = c(80, 50, 65),
+    pct_within_45min = c(95, 75, 85),
+    pct_within_60min = c(100, 90, 95)
+  )
+
+  withr::with_tempdir({
+    dir.create("output", showWarnings = FALSE)
+    result <- make_geo_summary_table(stats, stats, locations)
+    expect_true(file.exists(result))
+  })
+})

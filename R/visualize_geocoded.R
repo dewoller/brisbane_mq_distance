@@ -212,6 +212,50 @@ make_zoom_map <- function(zoom_result, locations, output_path) {
   output_path
 }
 
+make_top_mb_sd_plot <- function(community_zoom, families_zoom, locations, output_path) {
+  # Show SD comparison for top mesh blocks in both populations
+  n_top <- 50
+
+  prep_top <- function(zoom_result, label) {
+    zoom_result$mb |>
+      arrange(mean_duration_min) |>
+      head(n_top) |>
+      mutate(
+        population = label,
+        rank = row_number(),
+        label = paste0("#", rank)
+      )
+  }
+
+  top_data <- bind_rows(
+    prep_top(community_zoom, "Community"),
+    prep_top(families_zoom, "Families (3+)")
+  )
+
+  # Plot: mean +/- SD as error bars, coloured by population
+  p <- ggplot(top_data, aes(x = rank, y = mean_duration_min, colour = population)) +
+    geom_pointrange(
+      aes(ymin = mean_duration_min - sd_duration_min,
+          ymax = mean_duration_min + sd_duration_min),
+      position = position_dodge(width = 0.6),
+      size = 0.4
+    ) +
+    scale_colour_manual(values = c("Community" = "#377eb8", "Families (3+)" = "#e41a1c")) +
+    labs(
+      title = "Top 50 Mesh Blocks: Mean Travel Time +/- 1 SD",
+      subtitle = "Lower mean and smaller spread = better location",
+      x = "Rank",
+      y = "Travel Time (minutes)",
+      colour = "Population"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "top")
+
+  dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
+  ggsave(output_path, p, width = 14, height = 8, dpi = 150)
+  output_path
+}
+
 make_combined_zoom_map <- function(community_zoom, families_zoom, locations, output_path) {
   loc_data <- locations |>
     mutate(

@@ -68,6 +68,9 @@ route_population_to_centroids <- function(individuals_sf, candidate_centroids,
     group_by(area_code = location_id) |>
     summarise(
       mean_duration_min = mean(duration_min, na.rm = TRUE),
+      sd_duration_min = sd(duration_min, na.rm = TRUE),
+      min_duration_min = min(duration_min, na.rm = TRUE),
+      max_duration_min = max(duration_min, na.rm = TRUE),
       mean_distance_km = mean(distance_km, na.rm = TRUE),
       .groups = "drop"
     )

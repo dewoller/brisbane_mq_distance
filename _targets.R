@@ -97,5 +97,6 @@ list(
   tar_target(geo_summary_table, make_geo_summary_table(geo_community_stats, geo_families_stats, locations), format = "file"),
   tar_target(geo_community_zoom_map, make_zoom_map(geo_community_zoom, locations, "output/geo_community_zoom_map.html"), format = "file"),
   tar_target(geo_families_zoom_map, make_zoom_map(geo_families_zoom, locations, "output/geo_families_zoom_map.html"), format = "file"),
-  tar_target(geo_combined_zoom_map, make_combined_zoom_map(geo_community_zoom, geo_families_zoom, locations, "output/geo_combined_zoom_map.html"), format = "file")
+  tar_target(geo_combined_zoom_map, make_combined_zoom_map(geo_community_zoom, geo_families_zoom, locations, "output/geo_combined_zoom_map.html"), format = "file"),
+  tar_target(geo_top_mb_sd_plot, make_top_mb_sd_plot(geo_community_zoom, geo_families_zoom, locations, "output/geo_top_mb_sd.png"), format = "file")
 )

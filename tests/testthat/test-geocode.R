@@ -4,6 +4,7 @@
 library(testthat)
 library(tibble)
 library(dplyr)
+library(sf)
 source(file.path(here::here(), "R", "geocode.R"))
 
 test_that("read_geocoded_data returns cleaned tibble with correct columns", {
@@ -53,4 +54,38 @@ test_that("geocode_addresses returns coordinates for known Brisbane address", {
   expect_true(result$geo_success[1])
   expect_true(result$geo_lon[1] > 152 && result$geo_lon[1] < 154)
   expect_true(result$geo_lat[1] > -28 && result$geo_lat[1] < -27)
+})
+
+test_that("assign_locations assigns geocoded coords and falls back to POA centroid", {
+  source(file.path(here::here(), "R", "spatial.R"))
+  poa_boundaries <- load_poa_boundaries(file.path(here::here(), "data", "abs"))
+
+  raw <- tibble(
+    individual_id = 1:3,
+    household_id = c(1, 1, 2),
+    address = c("544 Sandgate Road", "544 Sandgate Road", NA),
+    suburb = c("Clayfield", "Clayfield", NA),
+    state = c("Queensland", "Queensland", NA),
+    postcode = c("4011", "4011", "4000")
+  )
+
+  lookup <- tibble(
+    address = "544 Sandgate Road",
+    suburb = "Clayfield",
+    postcode = "4011",
+    geo_lon = 153.06,
+    geo_lat = -27.43,
+    geo_success = TRUE
+  )
+
+  result <- assign_locations(raw, lookup, poa_boundaries)
+  expect_s3_class(result, "sf")
+  expect_equal(nrow(result), 3)
+  expect_equal(st_crs(result)$epsg, 4326L)
+  # Individuals 1 & 2 should have geocoded coords
+  coords <- st_coordinates(result)
+  expect_equal(unname(coords[1, "X"]), 153.06)
+  # Individual 3 (no address) should have postcode centroid, not NA
+  expect_false(is.na(coords[3, "X"]))
+  expect_false(is.na(coords[3, "Y"]))
 })
